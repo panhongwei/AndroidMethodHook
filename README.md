@@ -31,7 +31,7 @@ public class MainActivity extends AppCompatActivity  {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
     }
-     public static double test(Object thiz,int a,int b,char cr){
+     public  double test(Object thiz,int a,int b,char cr){
         return (a+0.0)/b;
     }
 }
