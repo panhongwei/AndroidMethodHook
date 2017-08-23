@@ -1,5 +1,6 @@
 # AndroidMethodHook
-结合(https://yq.aliyun.com/articles/74598?t=t1#)阿里Sophix热修复方案，使用dexmaker动态生成dex文件，通过反射获取动态生成的类的Method替换想要hook的Method。<br>
+结合阿里Sophix热修复方案(https://yq.aliyun.com/articles/74598?t=t1#)<br>
+使用了dexmaker库，主要用来动态生成dex文件。<br>
 使用方法：
 ```Java
 HookManager.findAndHookMethod(MainActivity.class, "onCreate", Bundle.class, new MethodCallback() {
@@ -17,7 +18,8 @@ HookManager.findAndHookMethod(MainActivity.class, "onCreate", Bundle.class, new 
 });
 HookManager.startHooks(base);
 ```
-主要思路为使用dexmaker生成一个一摸一样的方法，将this和传入参数封装成Object[] args传给MethodUtil类的invoke函数，然后回调MethodCallback实现类似于xposed mehtod hook。<br>
+通过对Native JmethodId内容替换实现method替换，替换的method方法来自于dexmaker动态生成。<br>
+所以对于每个需要hook的方法都会dexmaker生成一个一摸一样的方法，将this和传入参数封装成Object[] args传给MethodUtil类的invoke函数，然后回调MethodCallback实现类似于xposed mehtod hook。<br>
 ```Java
 public class com_panda_hook_andhook_MainActivity {
   public com_panda_hook_andhook_MainActivity() {
