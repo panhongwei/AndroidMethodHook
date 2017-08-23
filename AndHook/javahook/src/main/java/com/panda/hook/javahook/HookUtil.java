@@ -41,32 +41,6 @@ public class HookUtil {
         boolean isArt = vmVersion != null && vmVersion.startsWith("2");
         return isArt;
     }
-//    public static void invokeArtConstructor(Constructor con,Object thiz,Object[] args)
-//            throws NullPointerException, IllegalAccessException, IllegalArgumentException, InvocationTargetException
-//    {
-//        String name=con.getDeclaringClass().getSimpleName()+"_"+sign(con);
-//        Method m=conMap.get(name);
-//        if(m==null){
-//            m=generateConstructor(con);
-//            if(m==null)
-//                throw new NullPointerException("");
-//            conMap.put(name,m);
-//        }
-//        m.invoke(thiz,args);
-//    }
-//    public static Method getArtMethod(Method con)
-//            throws NullPointerException, IllegalAccessException, IllegalArgumentException, InvocationTargetException
-//    {
-//        String name=con.getDeclaringClass().getSimpleName()+"_"+sign(con);
-//        Method m=conMap.get(name);
-//        if(m==null){
-//            m=generateMethod(con);
-//            if(m==null)
-//                throw new NullPointerException("");
-//            conMap.put(name,m);
-//        }
-//        return m;
-//    }
     private static Method getOldConstructor(Constructor con,long addr){
         try {
             if(!isArt()){
@@ -104,8 +78,6 @@ public class HookUtil {
                 Field f=AccessibleObject.class.getDeclaredField("override");
                 f.setAccessible(true);
                 f.set(constructor,true);
-                // we can't use constructor.setAccessible(true); because Google does not like it
-//                AccessibleObject.setAccessible(new AccessibleObject[]{constructor}, true);
                 Method m = constructor.newInstance();
                 m.setAccessible(true);
                 for (Field field : abstractMethodClass.getDeclaredFields()) {
@@ -141,14 +113,6 @@ public class HookUtil {
                 Constructor<?> constructor = artMethodClass.getDeclaredConstructor();
                 constructor.setAccessible(true);
                 Object destArtMethod = constructor.newInstance();
-//
-//                //Fill the fields to the new method we created
-//                for (Field field : artMethodClass.getDeclaredFields()) {
-//                    if (!field.isAccessible()) {
-//                        field.setAccessible(true);
-//                    }
-//                    field.set(destArtMethod, field.get(srcArtMethod));
-//                }
                 Method newMethod = Method.class.getConstructor(artMethodClass).newInstance(destArtMethod);
                 newMethod.setAccessible(true);
                 repair(newMethod, addr);
@@ -160,9 +124,6 @@ public class HookUtil {
                 return newMethod;
             }else {
                 Constructor<Method> constructor = Method.class.getDeclaredConstructor();
-                // we can't use constructor.setAccessible(true); because Google does not like it
-//                constructor.setAccessible(true);
-//                AccessibleObject.setAccessible(new AccessibleObject[]{constructor}, true);
                 Field f=AccessibleObject.class.getDeclaredField("override");
                 f.setAccessible(true);
                 f.set(constructor,true);
