@@ -143,6 +143,7 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* vm, void* reserved) {
 			LOGD("cant dlopen libdvm");
 		}
 	}
+	LOGD("size offset=%d",size);
 	return JNI_VERSION_1_4;
 }
 static void invokeDavConstructor(const u4* args, void* pResult, void* method, void* self) {

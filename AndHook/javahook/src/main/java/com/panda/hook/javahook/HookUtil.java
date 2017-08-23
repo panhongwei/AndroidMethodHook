@@ -101,8 +101,11 @@ public class HookUtil {
                 return newCon;
             }else {
                 Constructor<Method> constructor = Method.class.getDeclaredConstructor();
+                Field f=AccessibleObject.class.getDeclaredField("override");
+                f.setAccessible(true);
+                f.set(constructor,true);
                 // we can't use constructor.setAccessible(true); because Google does not like it
-                AccessibleObject.setAccessible(new AccessibleObject[]{constructor}, true);
+//                AccessibleObject.setAccessible(new AccessibleObject[]{constructor}, true);
                 Method m = constructor.newInstance();
                 m.setAccessible(true);
                 for (Field field : abstractMethodClass.getDeclaredFields()) {
@@ -158,7 +161,11 @@ public class HookUtil {
             }else {
                 Constructor<Method> constructor = Method.class.getDeclaredConstructor();
                 // we can't use constructor.setAccessible(true); because Google does not like it
-                AccessibleObject.setAccessible(new AccessibleObject[]{constructor}, true);
+//                constructor.setAccessible(true);
+//                AccessibleObject.setAccessible(new AccessibleObject[]{constructor}, true);
+                Field f=AccessibleObject.class.getDeclaredField("override");
+                f.setAccessible(true);
+                f.set(constructor,true);
                 Method m = constructor.newInstance();
                 m.setAccessible(true);
                 for (Field field : abstractMethodClass.getDeclaredFields()) {
