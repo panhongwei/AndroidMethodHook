@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ProjectModuleManager">
+    <modules>
+      <module fileurl="file://$PROJECT_DIR$/AndHook.iml" filepath="$PROJECT_DIR$/AndHook.iml" />
+      <module fileurl="file://$PROJECT_DIR$/app/app.iml" filepath="$PROJECT_DIR$/app/app.iml" />
+      <module fileurl="file://$PROJECT_DIR$/dexmaker/dexmaker.iml" filepath="$PROJECT_DIR$/dexmaker/dexmaker.iml" />
+      <module fileurl="file://$PROJECT_DIR$/javahook/javahook.iml" filepath="$PROJECT_DIR$/javahook/javahook.iml" />
+    </modules>
+  </component>
+</project>

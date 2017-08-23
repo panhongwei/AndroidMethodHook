@@ -1,0 +1,18 @@
+apply plugin: 'java'
+//apply from: "$rootDir/gradle/publishing.gradle"
+
+//version = VERSION_NAME
+description = "A utility for doing compile or runtime code generation targeting Android's Dalvik VM"
+
+targetCompatibility = '1.7'
+sourceCompatibility = '1.7'
+
+repositories {
+    jcenter()
+}
+
+dependencies {
+    compile 'com.jakewharton.android.repackaged:dalvik-dx:7.1.0_r7'
+
+    testCompile 'junit:junit:4.12'
+}
