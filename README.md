@@ -20,6 +20,22 @@ HookManager.startHooks(base);
 ```
 通过对Native JmethodId内容替换实现method替换，替换的method方法来自于dexmaker动态生成。<br>
 所以对于每个需要hook的方法都会dexmaker生成一个一摸一样的方法，将this和传入参数封装成Object[] args传给MethodUtil类的invoke函数，然后回调MethodCallback实现类似于xposed mehtod hook。<br>
+生成代理method方式如下：<br>
+```Java
+package com.panda.hook.andhook;
+
+public class MainActivity extends AppCompatActivity  {
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+    }
+     public static double test(Object thiz,int a,int b,char cr){
+        return (a+0.0)/b;
+    }
+}
+```
 ```Java
 public class com_panda_hook_andhook_MainActivity {
   public com_panda_hook_andhook_MainActivity() {
