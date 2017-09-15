@@ -191,7 +191,7 @@ public class MethodUtil {
         }else if(cls.getName().equals(char.class.getName())){
             return CharacterType;
         }
-        return null;
+        return TypeId.get(cls);
     }
     private static MethodId getValueFromClass(Class cls){
         if(cls.getName().equals(int.class.getName())){

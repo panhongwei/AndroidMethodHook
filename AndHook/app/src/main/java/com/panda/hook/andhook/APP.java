@@ -25,12 +25,6 @@ public class APP extends Application {
     protected void attachBaseContext(Context base) {
         super.attachBaseContext(base);
         try {
-            Method m=MainActivity.class.getDeclaredMethod("test",Object.class,int.class,int.class,char.class);
-            Constructor conn=Test.class.getDeclaredConstructor(int.class,int.class);
-            List<BackMethod> list= new ArrayList();
-            BackMethod b=new BackMethod();
-            b.setOldMethod(m);
-            list.add(b);
             HookManager.findAndHookMethod(MainActivity.class, "test", Object.class, int.class, int.class, char.class, new MethodCallback() {
                 @Override
                 protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
@@ -45,7 +39,7 @@ public class APP extends Application {
                 protected void afterHookedMethod(MethodHookParam param) throws Throwable {
                     super.afterHookedMethod(param);
                     Log.d("panda", param.getResult()+"");
-                    param.setResult(112233.0);
+//                    param.setResult(112233.0);
                 }
             });
 //            HookManager.findAndHookMethod(MainActivity.class, "onCreate", Bundle.class, new MethodCallback() {

@@ -75,7 +75,12 @@ public class HookUtil {
                 return newCon;
             }else {
                 Constructor<Method> constructor = Method.class.getDeclaredConstructor();
-                Field f=AccessibleObject.class.getDeclaredField("override");
+                Field f;
+                try {
+                    f = AccessibleObject.class.getDeclaredField("override");
+                }catch (Exception e){
+                    f = AccessibleObject.class.getDeclaredField("flag");
+                }
                 f.setAccessible(true);
                 f.set(constructor,true);
                 Method m = constructor.newInstance();
@@ -124,7 +129,12 @@ public class HookUtil {
                 return newMethod;
             }else {
                 Constructor<Method> constructor = Method.class.getDeclaredConstructor();
-                Field f=AccessibleObject.class.getDeclaredField("override");
+                Field f;
+                try {
+                   f = AccessibleObject.class.getDeclaredField("override");
+                }catch (Exception e){
+                    f = AccessibleObject.class.getDeclaredField("flag");
+                }
                 f.setAccessible(true);
                 f.set(constructor,true);
                 Method m = constructor.newInstance();

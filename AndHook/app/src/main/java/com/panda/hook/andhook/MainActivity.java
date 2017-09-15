@@ -33,11 +33,17 @@ public class MainActivity extends AppCompatActivity  {
             Log.d("panda","res="+ test(this,123,2444,'Z')+"");
             Log.d("panda","res="+test(this,333,4444,'E')+"");
             new Test(11111,22222);
+            Log.d("panda","before reflect");
+            Method t=MainActivity.class.getDeclaredMethod("test",Object.class,int.class,int.class,char.class);
+//            Log.d("panda",t+"");
+            Log.d("panda","after reflect");
+            t.invoke(this,this,111,333,'D');
+            Log.d("panda","after invoke");
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
-     public static double test(Object thiz,int a,int b,char cr){
-        return (a+0.0)/b;
+     public static MainActivity test(Object thiz,int a,int b,char cr){
+        return null;
     }
 }
