@@ -30,6 +30,20 @@ public class HookManager {
     static private HashMap<String,BackMethod> hooked=new HashMap();
     static private Context context=null;
     static private List<BackMethod> needHooks=new ArrayList<>();
+    private static final Map<Class<?>, String> PRIMITIVE_TO_SIGNATURE;
+    static {
+        PRIMITIVE_TO_SIGNATURE = new HashMap<Class<?>, String>(9);
+        PRIMITIVE_TO_SIGNATURE.put(byte.class, "B");
+        PRIMITIVE_TO_SIGNATURE.put(char.class, "C");
+        PRIMITIVE_TO_SIGNATURE.put(short.class, "S");
+        PRIMITIVE_TO_SIGNATURE.put(int.class, "I");
+        PRIMITIVE_TO_SIGNATURE.put(long.class, "J");
+        PRIMITIVE_TO_SIGNATURE.put(float.class, "F");
+        PRIMITIVE_TO_SIGNATURE.put(double.class, "D");
+        PRIMITIVE_TO_SIGNATURE.put(void.class, "V");
+        PRIMITIVE_TO_SIGNATURE.put(boolean.class, "Z");
+    }
+
     public static Context getSystemContext() {
         if (context == null) {
             try {
@@ -107,15 +121,12 @@ public class HookManager {
                 if(mem==null)
                     throw new NullPointerException("mem is null");
                 if(m instanceof Method){
-                    Method getSig=Method.class.getDeclaredMethod("getSignature");
-                    getSig.setAccessible(true);
-                    String sig=(String)getSig.invoke(m);
+                    String sig=getMethodSignature((Method)m);
                     sig=sig.replace(".","/");
+                    Log.d("panda",sig);
                     HookUtil.initMethod(m.getDeclaringClass(),m.getName(),sig,Modifier.isStatic(m.getModifiers()));
                 }else {
-                    Method getSig=Constructor.class.getDeclaredMethod("getSignature");
-                    getSig.setAccessible(true);
-                    String sig=(String)getSig.invoke(m);
+                    String sig=getConstructorSignature((Constructor)m);
                     sig=sig.replace(".","/");
                     HookUtil.initMethod(m.getDeclaringClass(),"<init>",sig,Modifier.isStatic(m.getModifiers()));
                 }
@@ -267,5 +278,41 @@ public class HookManager {
             throw param.getThrowable();
         }
         return param.getResult();
+    }
+    static String getMethodSignature(Method m) {
+        StringBuilder result = new StringBuilder();
+
+        result.append('(');
+        Class<?>[] parameterTypes = m.getParameterTypes();
+        for (Class<?> parameterType : parameterTypes) {
+            result.append(getSignature(parameterType));
+        }
+        result.append(')');
+        result.append(getSignature(m.getReturnType()));
+        return result.toString();
+    }
+
+    public static String getSignature(Class<?> clazz) {
+        String primitiveSignature = PRIMITIVE_TO_SIGNATURE.get(clazz);
+        if (primitiveSignature != null) {
+            return primitiveSignature;
+        } else if (clazz.isArray()) {
+            return "[" + getSignature(clazz.getComponentType());
+        } else {
+            // TODO: this separates packages with '.' rather than '/'
+            return "L" + clazz.getName() + ";";
+        }
+    }
+    static String getConstructorSignature(Constructor c) {
+        StringBuilder result = new StringBuilder();
+
+        result.append('(');
+        Class<?>[] parameterTypes = c.getParameterTypes();
+        for (Class<?> parameterType : parameterTypes) {
+            result.append(getSignature(parameterType));
+        }
+        result.append(")V");
+
+        return result.toString();
     }
 }

@@ -23,7 +23,7 @@ import java.util.HashMap;
 public class HookUtil {
     private static HashMap<String,Method> conMap=new HashMap();
     static {
-        System.loadLibrary("nativeutils");
+        System.loadLibrary("nativemode");
         try {
             computeAccess(MethodDemo.class.getDeclaredMethod("m1"));
         }catch (Exception e){e.printStackTrace();}
@@ -46,7 +46,12 @@ public class HookUtil {
             if(!isArt()){
                 return null;
             }
-            Class<?> abstractMethodClass = Class.forName("java.lang.reflect.AbstractMethod");
+            Class<?> abstractMethodClass;
+            try {
+                abstractMethodClass = Class.forName("java.lang.reflect.AbstractMethod");
+            }catch (Exception e){
+                abstractMethodClass = Class.forName("java.lang.reflect.Executable");
+            }
             if(Build.VERSION.SDK_INT<23){
                 Class<?> artMethodClass = Class.forName("java.lang.reflect.ArtMethod");
                 //Get the original artMethod field
@@ -105,7 +110,12 @@ public class HookUtil {
             if(!isArt()){
                 return null;
             }
-            Class<?> abstractMethodClass = Class.forName("java.lang.reflect.AbstractMethod");
+            Class<?> abstractMethodClass;
+            try {
+                abstractMethodClass = Class.forName("java.lang.reflect.AbstractMethod");
+            }catch (Exception e){
+                abstractMethodClass = Class.forName("java.lang.reflect.Executable");
+            }
             if(Build.VERSION.SDK_INT<23){
                 Class<?> artMethodClass = Class.forName("java.lang.reflect.ArtMethod");
                 //Get the original artMethod field
@@ -184,7 +194,7 @@ public class HookUtil {
             }
             if(method instanceof Method){
                 Method m_=getOldMethod((Method)method,old);
-                Log.d("panda",m_+"");
+//                Log.d("panda",m_+"");
                 conMap.put(name,m_);
                 return m_;
             }else{
@@ -214,7 +224,19 @@ public class HookUtil {
         if(!isArt()){
             return  0;
         }
-        if (Build.VERSION.SDK_INT >= 23) {
+        if (Build.VERSION.SDK_INT >= 26) {
+            try {
+                Class<?> abstractMethodClass = Class.forName("java.lang.reflect.Executable");
+                Field artMethodField = abstractMethodClass.getDeclaredField("artMethod");
+                artMethodField.setAccessible(true);
+                Method m1=MethodDemo.class.getDeclaredMethod("m1");
+                Method m2=MethodDemo.class.getDeclaredMethod("m2");
+                int res=(int)(artMethodField.getLong(m1)-artMethodField.getLong(m2));
+                return Math.abs(res);
+            } catch (Throwable e) {
+                Log.d("panda","",e);
+            }
+        }else if (Build.VERSION.SDK_INT >= 23) {
             try {
                 Class<?> abstractMethodClass = Class.forName("java.lang.reflect.AbstractMethod");
                 Field artMethodField = abstractMethodClass.getDeclaredField("artMethod");

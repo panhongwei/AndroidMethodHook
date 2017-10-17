@@ -4,9 +4,11 @@
 #include "NativeHelper.h"
 #include <malloc.h>
 #include <string.h>
+#include "ArtMethod_8_0.h"
 
 int size=0;
 int access;
+int level;
 bool isArt_;
 typedef uint16_t u2;
 typedef uint32_t u4;
@@ -23,6 +25,12 @@ static long replaceNative(JNIEnv* env, jclass clazz, jobject src, jobject new_) 
 	void* p=malloc(size);
 	if(p){
 		memcpy(p,mSrc,size);
+
+	}
+	if(level>=26&&!IsDirect(((ArtMethod *) mSrc)->access_flags_)){
+		ArtMethod *aSrc = (ArtMethod *) mSrc;
+		ArtMethod *aNew_ = (ArtMethod *) mNew_;
+		aNew_->method_index_ = aSrc->method_index_;
 	}
 	memcpy(mSrc, mNew_, size);
 	return  (size_t)p;
@@ -43,10 +51,10 @@ static void repair(JNIEnv* env, jclass clazz, jobject src, jlong old) {
 static void computeAccess(JNIEnv* env, jclass clazz, jobject src) {
 	size_t * mSrc=(size_t *)env->FromReflectedMethod(src);
 	size_t * com=(size_t *)env->GetStaticMethodID(env->FindClass(JAVA_CLASS),"compute","()I");
-	for(int i=0;i<size/4;++i){
+	for(int i=0;i<size/ sizeof(void *);++i){
 		if(*(mSrc+i)==0x80019&&*(com+i)==0x80009){
 			access=i;
-			LOGD("access offset=%d",access);
+//			LOGD("access offset=%d",access);
 			return;
 		}
 	}
@@ -116,6 +124,8 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* vm, void* reserved) {
 	size= reinterpret_cast<size_t >(m2)-reinterpret_cast<size_t >(m1);
 	jmethodID isArt=env->GetStaticMethodID(env->FindClass(JAVA_CLASS),"isArt","()Z");
 	isArt_=env->CallStaticBooleanMethod(env->FindClass(JAVA_CLASS),isArt);
+	jmethodID apiLevel=env->GetStaticMethodID(env->FindClass(JAVA_CLASS),"apiLevel","()I");
+	level=env->CallStaticIntMethod(env->FindClass(JAVA_CLASS),apiLevel);
 	if(isArt_){
 		jmethodID com=env->GetStaticMethodID(env->FindClass(JAVA_CLASS),"compute","()I");
 		size=env->CallStaticIntMethod(env->FindClass(JAVA_CLASS),com);
@@ -143,7 +153,7 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* vm, void* reserved) {
 			LOGD("cant dlopen libdvm");
 		}
 	}
-	LOGD("size offset=%d",size);
+	LOGD("size offset=%d level=%d",size,level);
 	return JNI_VERSION_1_4;
 }
 static void invokeDavConstructor(const u4* args, void* pResult, void* method, void* self) {

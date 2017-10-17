@@ -10,12 +10,9 @@ public class Test {
     int aa;
     int bb;
     public Test(int a,int b){
-        Log.d("panda", "in constructor");
-        Log.d("panda", a+"");
-        Log.d("panda", b+"");
         this.aa=a;
         this.bb=b;
-//        log();
+        log();
     }
     private void log(){
         Log.d("panda", "aa");

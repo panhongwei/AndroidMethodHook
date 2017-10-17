@@ -30,20 +30,27 @@ public class MainActivity extends AppCompatActivity  {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         try {
-            Log.d("panda","res="+ test(this,123,2444,'Z')+"");
-            Log.d("panda","res="+test(this,333,4444,'E')+"");
+//            Log.d("panda","before invoke  =======>>>>>>");
+//            Method t=MainActivity.class.getDeclaredMethod("test1",Object.class,int.class,int.class,char.class);
+//            t.invoke(this,this,111,333,'D');
+            Log.d("panda","before invoke test =======>>>>>>");
+            Log.d("panda","test res="+ test(this,123,2444,'Z')+"");
+            Log.d("panda","before invoke test1 =======>>>>>>");
+            Log.d("panda","test1 res="+test1(this,333,4444,'E')+"");
+            Log.d("panda","before invoke contrustor Test =======>>>>>>");
             new Test(11111,22222);
-            Log.d("panda","before reflect");
-            Method t=MainActivity.class.getDeclaredMethod("test",Object.class,int.class,int.class,char.class);
-//            Log.d("panda",t+"");
-            Log.d("panda","after reflect");
+            Log.d("panda","before invoke reflect Test =======>>>>>>");
+            Method t=MainActivity.class.getDeclaredMethod("test1",Object.class,int.class,int.class,char.class);
             t.invoke(this,this,111,333,'D');
-            Log.d("panda","after invoke");
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
-     public static MainActivity test(Object thiz,int a,int b,char cr){
+    public  static MainActivity test(Object thiz,int a,int b,char cr){
         return null;
+    }
+    public  int test1(Object thiz,int a,int b,char cr){
+        Log.d("panda","in new test1");
+        return 111;
     }
 }

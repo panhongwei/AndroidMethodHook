@@ -38,4 +38,5 @@
 #define JAVA_CLASS "com/panda/hook/javahook/HookUtil"
 #define DEMO_CLASS "com/panda/hook/javahook/MethodDemo"
 #define OBJECT_PATH "java/lang/Object"
+
 #endif

@@ -9,6 +9,7 @@ import android.util.Log;
 import com.android.dx.command.Main;
 import com.panda.hook.javahook.BackMethod;
 import com.panda.hook.javahook.HookManager;
+import com.panda.hook.javahook.HookUtil;
 import com.panda.hook.javahook.MethodCallback;
 import com.panda.hook.javahook.MethodHookParam;
 
@@ -30,31 +31,46 @@ public class APP extends Application {
                 protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
                     super.beforeHookedMethod(param);
 //                    Log.d("panda", "i'm in method beforeHookedMethod"+());
-                    Log.d("panda", "i'm in method beforeHookedMethod");
-                    Log.d("panda", param.thisObject+"");
+                    Log.d("panda", "i'm in method " +param.method.getName()+" beforeHookedMethod");
 //                    param.setResult(111.0);
                 }
 
                 @Override
                 protected void afterHookedMethod(MethodHookParam param) throws Throwable {
                     super.afterHookedMethod(param);
-                    Log.d("panda", param.getResult()+"");
+                    Log.d("panda", "i'm in method " +param.method.getName()+" afterHookedMethod");
 //                    param.setResult(112233.0);
                 }
             });
-//            HookManager.findAndHookMethod(MainActivity.class, "onCreate", Bundle.class, new MethodCallback() {
-//                @Override
-//                protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
-//                    super.beforeHookedMethod(param);
-//                    Log.d("panda", "onCreate:"+param.thisObject.getClass().getName());
-//                }
-//
-//                @Override
-//                protected void afterHookedMethod(MethodHookParam param) throws Throwable {
-//                    super.afterHookedMethod(param);
-//                    Log.d("panda", "i'm in method " +param.method.getName()+" afterHookedMethod");
-//                }
-//            });
+            HookManager.findAndHookMethod(MainActivity.class, "test1", Object.class, int.class, int.class, char.class, new MethodCallback() {
+                @Override
+                protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+                    super.beforeHookedMethod(param);
+//                    Log.d("panda", "i'm in method beforeHookedMethod"+());
+                    Log.d("panda", "i'm in method " +param.method.getName()+" beforeHookedMethod");
+//                    param.setResult(111.0);
+                }
+
+                @Override
+                protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+                    super.afterHookedMethod(param);
+                    Log.d("panda", "i'm in method " +param.method.getName()+" afterHookedMethod");
+//                    param.setResult(112233.0);
+                }
+            });
+            HookManager.findAndHookMethod(Activity.class, "onCreate", Bundle.class, new MethodCallback() {
+                @Override
+                protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+                    super.beforeHookedMethod(param);
+                    Log.d("panda", "onCreate:"+param.thisObject.getClass().getName());
+                }
+
+                @Override
+                protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+                    super.afterHookedMethod(param);
+                    Log.d("panda", "i'm in method " +param.method.getName()+" afterHookedMethod");
+                }
+            });
             HookManager.findAndHookConstructor(Test.class, int.class, int.class, new MethodCallback() {
                 @Override
                 protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
@@ -76,5 +92,4 @@ public class APP extends Application {
     public void onCreate() {
         super.onCreate();
     }
-
 }
