@@ -58,13 +58,25 @@ public class HookManager {
             return context;
         }
     }
+    public static boolean isHooked(Member m){
+        String sigName=m.getDeclaringClass().getSimpleName()+"."+HookUtil.sign(m);
+        if(hooked.get(sigName)!=null){
+            return true;
+        }else {
+            return false;
+        }
+    }
+    public static String getCallerStr(Member old){
+        String sigName=old.getDeclaringClass().getSimpleName()+"."+HookUtil.sign(old);
+        return sigName;
+    }
     public static void beginHook(List<BackMethod> methods){
         try {
+//            ReflectionFix.fixMethodReflection();
             Iterator<BackMethod> it = methods.iterator();
             while(it.hasNext()){
                 BackMethod m = it.next();
-                String sigName=m.getOldMethod().getDeclaringClass().getSimpleName()+"."+HookUtil.sign(m.getOldMethod());
-                if(hooked.get(sigName)!=null){
+                if(isHooked(m.getOldMethod())){
                     Log.d("panda",m.getOldMethod().getName()+" is hooked!");
                     it.remove();
                 }
@@ -85,14 +97,18 @@ public class HookManager {
                     classes.put(name,cls);
                     if(m.getOldMethod() instanceof Method) {
                         MethodUtil.generateMethodFromMethod(dexMaker, cls, (Method) m.getOldMethod());
+                        MethodUtil.generateInvokerFromMethod(dexMaker, cls, (Method) m.getOldMethod());
                     }else {
                         MethodUtil.generateMethodFromConstructor(dexMaker, cls, (Constructor) m.getOldMethod());
+                        MethodUtil.generateInvokerFromConstructor(dexMaker, cls, (Constructor) m.getOldMethod());
                     }
                 }else{
                     if(m.getOldMethod() instanceof Method) {
                         MethodUtil.generateMethodFromMethod(dexMaker, classes.get(name), (Method) m.getOldMethod());
+                        MethodUtil.generateInvokerFromMethod(dexMaker, classes.get(name), (Method) m.getOldMethod());
                     }else {
                         MethodUtil.generateMethodFromConstructor(dexMaker, classes.get(name), (Constructor) m.getOldMethod());
+                        MethodUtil.generateInvokerFromConstructor(dexMaker, classes.get(name), (Constructor) m.getOldMethod());
                     }
                 }
             }
@@ -113,17 +129,20 @@ public class HookManager {
                 Constructor con=cls.getDeclaredConstructor();
                 con.newInstance();
                 Member mem=null;
+                Method invoker=null;
                 if(m instanceof Method){
                     mem=cls.getDeclaredMethod(m.getName(),((Method) m).getParameterTypes());
+                    invoker=cls.getDeclaredMethod(m.getName()+"_Invoker",((Method) m).getParameterTypes());
                 }else{
                     mem=cls.getDeclaredConstructor(((Constructor) m).getParameterTypes());
+                    invoker=cls.getDeclaredMethod("init_Invoker",((Constructor) m).getParameterTypes());
                 }
-                if(mem==null)
+                if(mem==null||invoker==null)
                     throw new NullPointerException("mem is null");
+                bak.setInvoker(invoker);
                 if(m instanceof Method){
                     String sig=getMethodSignature((Method)m);
                     sig=sig.replace(".","/");
-                    Log.d("panda",sig);
                     HookUtil.initMethod(m.getDeclaringClass(),m.getName(),sig,Modifier.isStatic(m.getModifiers()));
                 }else {
                     String sig=getConstructorSignature((Constructor)m);
@@ -222,7 +241,7 @@ public class HookManager {
         if(callback==null){
             throw new  NullPointerException("find old Method null");
         }
-        old= HookUtil.repairMethod(back.getOldMethod(),(long)back.getBackAddr());
+        old= HookUtil.repairMethod(back.getOldMethod(),back.getInvoker(),(long)back.getBackAddr());
         if(old==null){
             throw new  NullPointerException("find old Method null");
         }

@@ -37,6 +37,7 @@
 #define LOGE(...) __android_log_print(ANDROID_LOG_ERROR, TAG, __VA_ARGS__)
 #define JAVA_CLASS "com/panda/hook/javahook/HookUtil"
 #define DEMO_CLASS "com/panda/hook/javahook/MethodDemo"
+#define FIX_CLASS "com/panda/hook/javahook/ReflectionFix"
 #define OBJECT_PATH "java/lang/Object"
 
 #endif

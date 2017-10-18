@@ -107,6 +107,31 @@ public class MethodUtil {
         }
 
     }
+    public static void generateInvokerFromMethod(DexMaker dexMaker, TypeId<?> declaringType,Method m) {
+        Class<?>[] pTypes = m.getParameterTypes();
+        TypeId<?> params[] = new TypeId[pTypes.length ];
+        for (int i = 0; i < pTypes.length; ++i) {
+            params[i ] = getTypeIdFromClass(pTypes[i]);
+        }
+        MethodId proxy = declaringType.getMethod(TypeId.get(Void.TYPE), m.getName()+"_Invoker", params);
+        Code code;
+        code = dexMaker.declare(proxy, Modifier.STATIC | Modifier.PUBLIC);
+        code.returnVoid();
+        return;
+    }
+    public static void generateInvokerFromConstructor(DexMaker dexMaker, TypeId<?> declaringType,Constructor m) {
+        Class<?>[] pTypes = m.getParameterTypes();
+        TypeId<?> params[] = new TypeId[pTypes.length ];
+        for (int i = 0; i < pTypes.length; ++i) {
+            params[i ] = getTypeIdFromClass(pTypes[i]);
+        }
+        MethodId proxy = declaringType.getMethod(TypeId.get(Void.TYPE), "init_Invoker", params);
+        Code code;
+        code = dexMaker.declare(proxy, Modifier.STATIC | Modifier.PUBLIC);
+        code.returnVoid();
+        return;
+
+    }
     public static void generateMethodFromConstructor(DexMaker dexMaker, TypeId<?> declaringType, Constructor m) {
         Class<?>[] pTypes = m.getParameterTypes();
         TypeId<?> params[] = new TypeId[pTypes.length ];

@@ -27,7 +27,7 @@ static long replaceNative(JNIEnv* env, jclass clazz, jobject src, jobject new_) 
 		memcpy(p,mSrc,size);
 
 	}
-	if(level>=26&&!IsDirect(((ArtMethod *) mSrc)->access_flags_)){
+	if(level>=26&&!IsDirect(((ArtMethod *) mSrc)->access_flags_)) {
 		ArtMethod *aSrc = (ArtMethod *) mSrc;
 		ArtMethod *aNew_ = (ArtMethod *) mNew_;
 		aNew_->method_index_ = aSrc->method_index_;
@@ -38,11 +38,13 @@ static long replaceNative(JNIEnv* env, jclass clazz, jobject src, jobject new_) 
 static void repair(JNIEnv* env, jclass clazz, jobject src, jlong old) {
 	size_t* mSrc=(size_t*)env->FromReflectedMethod(src);
 	void* p=(void*) old;
-	if(old==-1){
-		*(mSrc+access)=*(mSrc+access)|0x0002;
-		return;
-	}
+//	*(mSrc+access)=*(mSrc+access)|0x0002;
+//	if(old==-1){
+//		*(mSrc+access)=*(mSrc+access)|0x0002;
+//		return;
+//	}
 	memcpy(mSrc,p,size);
+	*(mSrc+access)=*(mSrc+access)|0x0002;
 	if(!isArt_) {
 		free(p);
 	}
@@ -75,6 +77,13 @@ static void initMethod(JNIEnv* env, jclass clazz, jclass cls,jstring name,jstrin
 	}
 	return;
 }
+jobject invoke(JNIEnv* env, jobject clazz,jobject obj,jobject args){
+	LOGD("in native invoke");
+	jclass fix=env->FindClass(FIX_CLASS);
+	jmethodID m1=env->GetStaticMethodID(fix,"invoke","(Ljava/lang/Object;Ljava/lang/Object;[Ljava/lang/Object;)Ljava/lang/Object;");
+	jobject res=env->CallStaticObjectMethod(fix,m1,clazz,obj,args);
+	return res;
+}
 /*
  * JNI registration.
  */
@@ -83,6 +92,7 @@ static JNINativeMethod gMethods[] = {
 { "repair", "(Ljava/lang/reflect/Member;J)V", (void*) repair },
 { "computeAccess", "(Ljava/lang/reflect/Method;)V", (void*) computeAccess },
 { "initMethod", "(Ljava/lang/Class;Ljava/lang/String;Ljava/lang/String;Z)V", (void*) initMethod },
+{ "invoke", "(Ljava/lang/Object;[Ljava/lang/Object;)Ljava/lang/Object;", (void*) invoke },
 };
 /*
  * Register several native methods for one class.
@@ -153,7 +163,7 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* vm, void* reserved) {
 			LOGD("cant dlopen libdvm");
 		}
 	}
-	LOGD("size offset=%d level=%d",size,level);
+//	LOGD("size offset=%d level=%d",size,level);
 	return JNI_VERSION_1_4;
 }
 static void invokeDavConstructor(const u4* args, void* pResult, void* method, void* self) {

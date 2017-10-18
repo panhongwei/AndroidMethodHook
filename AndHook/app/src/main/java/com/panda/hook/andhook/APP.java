@@ -23,6 +23,14 @@ import java.util.List;
  */
 
 public class APP extends Application {
+    public static Method t;
+    static {
+        try {
+            t = MainActivity.class.getDeclaredMethod("test1", Object.class, int.class, int.class, char.class);
+        } catch (Exception e) {
+        }
+    }
+
     protected void attachBaseContext(Context base) {
         super.attachBaseContext(base);
         try {
@@ -30,7 +38,6 @@ public class APP extends Application {
                 @Override
                 protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
                     super.beforeHookedMethod(param);
-//                    Log.d("panda", "i'm in method beforeHookedMethod"+());
                     Log.d("panda", "i'm in method " +param.method.getName()+" beforeHookedMethod");
 //                    param.setResult(111.0);
                 }
@@ -47,6 +54,7 @@ public class APP extends Application {
                 protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
                     super.beforeHookedMethod(param);
 //                    Log.d("panda", "i'm in method beforeHookedMethod"+());
+                    Log.d("panda", "i'm in method beforeHookedMethod "+ param.thisObject);
                     Log.d("panda", "i'm in method " +param.method.getName()+" beforeHookedMethod");
 //                    param.setResult(111.0);
                 }

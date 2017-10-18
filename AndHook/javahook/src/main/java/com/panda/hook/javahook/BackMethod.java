@@ -1,12 +1,23 @@
 package com.panda.hook.javahook;
 
 import java.lang.reflect.Member;
+import java.lang.reflect.Method;
 
 /**
  * Created by panda on 17/8/12.
  */
 
 public class BackMethod {
+    public Method getInvoker() {
+        return invoker;
+    }
+
+    public void setInvoker(Method invoker) {
+        this.invoker = invoker;
+    }
+
+    private Method invoker;
+
     private Member oldMethod;
 
     public Member getNewMethod() {
@@ -19,7 +30,7 @@ public class BackMethod {
 
     private Member newMethod;
 
-    public void setBackAddr(Object backAddr) {
+    public void setBackAddr(long backAddr) {
         this.backAddr = backAddr;
     }
 
@@ -27,7 +38,7 @@ public class BackMethod {
         this.oldMethod = oldMethod;
     }
 
-    public Object getBackAddr() {
+    public long getBackAddr() {
         return backAddr;
     }
 
@@ -35,7 +46,7 @@ public class BackMethod {
         return oldMethod;
     }
 
-    private Object backAddr;
+    private long backAddr;
 
     public Object getCallback() {
         return callback;

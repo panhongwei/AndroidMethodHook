@@ -14,8 +14,8 @@ public class Test {
         this.bb=b;
         log();
     }
-    private void log(){
-        Log.d("panda", "aa");
-        Log.d("panda", "bb");
+    public void log(){
+        Log.d("panda", aa+"");
+        Log.d("panda", bb+"");
     }
 }
