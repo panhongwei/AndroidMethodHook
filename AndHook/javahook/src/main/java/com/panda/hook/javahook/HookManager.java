@@ -10,6 +10,8 @@ import com.android.dx.TypeId;
 //import junit.framework.TestMine;
 
 import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.lang.reflect.Array;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
@@ -91,8 +93,14 @@ public class HookManager {
                 String name=m.getOldMethod().getDeclaringClass().getName().replace(".","_");
                 if(classes.get(name)==null){
                     TypeId<?> cls = TypeId.get("L"+name+";");
-                    dexMaker.declare(cls, "", Modifier.PUBLIC, TypeId.OBJECT);
-
+                    Class target=m.getOldMethod().getDeclaringClass();
+//                    dexMaker.declare(cls, "", Modifier.PUBLIC, TypeId.OBJECT);
+                    if(Modifier.isFinal(target.getModifiers())) {
+                        dexMaker.declare(cls, "", Modifier.PUBLIC, TypeId.OBJECT);
+                    }else {
+                        dexMaker.declare(cls, "", Modifier.PUBLIC, TypeId.get(target));
+                    }
+                    MethodUtil.addDefaultInstanceField(dexMaker,cls);
                     MethodUtil.addDefaultConstructor(dexMaker, cls);
                     classes.put(name,cls);
                     if(m.getOldMethod() instanceof Method) {
@@ -112,7 +120,6 @@ public class HookManager {
                     }
                 }
             }
-//            Log.d("panda",getSystemContext().getCacheDir().getPath());
             File outputDir = new File(context.getDir("path", Context.MODE_PRIVATE).getPath());
             if (outputDir.exists()) {
                 File[] fs = outputDir.listFiles();
@@ -126,10 +133,18 @@ public class HookManager {
                 Member m=bak.getOldMethod();
                 String name=m.getDeclaringClass().getName().replace(".","_");
                 Class<?> cls = loader.loadClass(name);
+                Field classLoaderField = Class.class.getDeclaredField("classLoader");
+                classLoaderField.setAccessible(true);
+                classLoaderField.set(cls, m.getDeclaringClass().getClassLoader());
                 Constructor con=cls.getDeclaredConstructor();
                 con.newInstance();
                 Member mem=null;
                 Method invoker=null;
+                if( HookUtil.isArt()) {
+                    if (!HookUtil.setMadeClassSuper(cls)) {
+                        throw new FileNotFoundException("found error!");
+                    }
+                }
                 if(m instanceof Method){
                     mem=cls.getDeclaredMethod(m.getName(),((Method) m).getParameterTypes());
                     invoker=cls.getDeclaredMethod(m.getName()+"_Invoker",((Method) m).getParameterTypes());

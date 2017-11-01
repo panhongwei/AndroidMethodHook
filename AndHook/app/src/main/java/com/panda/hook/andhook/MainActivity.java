@@ -24,6 +24,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class MainActivity extends AppCompatActivity  {
+    public static MainActivity instance=new MainActivity();
+    static {
+        System.loadLibrary("test");
+    }
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -35,17 +39,19 @@ public class MainActivity extends AppCompatActivity  {
             Log.d("panda","test1 res="+test1(this,333,4444,'E')+"");
             Log.d("panda","before invoke contrustor Test =======>>>>>>");
             new Test(11111,22222).log();
+            Log.d("panda","before invoke reflect tt =======>>>>>>");
+            tt(instance);
             Log.d("panda","before invoke reflect Test =======>>>>>>");
-//            Method t=MainActivity.class.getDeclaredMethod("test1",Object.class,int.class,int.class,char.class);
-            APP.t.invoke(this,this,111,333,'D');
+            Method t=MainActivity.class.getDeclaredMethod("test1",Object.class,int.class,int.class,char.class);
+            t.invoke(this,this,111,333,'D');
         } catch (Exception e) {
-            e.printStackTrace();
+            Log.e("panda","",e);
         }
     }
     public  static MainActivity test(Object thiz,int a,int b,char cr){
         return null;
     }
-    private int test1(Object thiz,int a,int b,char cr){
+    public int test1(Object thiz,int a,int b,char cr){
         Log.d("panda","in new test1");
         return 111;
     }
@@ -54,4 +60,5 @@ public class MainActivity extends AppCompatActivity  {
         Log.d("panda","in new test2");
         return 111;
     }
+    public static native void tt(MainActivity instance);
 }

@@ -35,23 +35,6 @@
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO,  TAG, __VA_ARGS__)
 #define LOGW(...) __android_log_print(ANDROID_LOG_WARN,  TAG, __VA_ARGS__)
 #define LOGE(...) __android_log_print(ANDROID_LOG_ERROR, TAG, __VA_ARGS__)
-#define JAVA_CLASS "com/panda/hook/javahook/HookUtil"
-#define DEMO_CLASS "com/panda/hook/javahook/MethodDemo"
-#define FIX_CLASS "com/panda/hook/javahook/ReflectionFix"
-//#define OBJECT_CLASS "java/lang/Object"
-#define OBJECT_PATH "java/lang/Object"
-
-class ArtField{
-public:
-    uint32_t declaring_class_;
-
-    uint32_t access_flags_ = 0;
-
-    // Dex cache index of field id
-    uint32_t field_dex_idx_ = 0;
-
-    // Offset of field within an instance or in the Class' static fields
-    uint32_t offset_ = 0;
-};
+#define JAVA_CLASS "com/panda/hook/andhook/MainActivity"
 
 #endif

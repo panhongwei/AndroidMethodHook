@@ -22,17 +22,23 @@ import java.util.Map;
  * Created by panda on 17/8/8.
  */
 
-public class HookUtil {
+public class HookUtil extends Object{
+    int test;
     private static HashMap<String,Method> conMap=new HashMap();
     static {
         System.loadLibrary("nativemode");
         try {
-            computeAccess(MethodDemo.class.getDeclaredMethod("m1"));
+            if(isArt()) {
+                computeAccess(MethodDemo.class.getDeclaredMethod("m1"));
+                computeSupperCls(Object.class.getDeclaredFields()[0], HookUtil.class.getDeclaredField("test"));
+            }
         }catch (Exception e){e.printStackTrace();}
     }
     private static native long replaceNative(Member src,Member new_);
     private static native void repair(Member src,long old);
     private static native void computeAccess(Method m);
+    private static native void computeSupperCls(Field fld,Field test);
+    private static native boolean setSupperCls(Field fld);
     private static native void invokeDavConstructor(Member method,
                 Class<?>[] parameterTypes, Class<?> returnType, Object thisObject, Object[] args)
             throws NullPointerException, IllegalAccessException, IllegalArgumentException, InvocationTargetException;
@@ -45,65 +51,21 @@ public class HookUtil {
         boolean isArt = vmVersion != null && vmVersion.startsWith("2");
         return isArt;
     }
+    public static boolean setMadeClassSuper(Class cls){
+        try{
+            Field flag=cls.getField("flag");
+            setSupperCls(flag);
+            return true;
+        }catch (Exception e){
+            Log.e("panda","field not found!",e);
+            return false;
+        }
+    }
     private static Method getOldConstructor(Constructor con,Method invoker,long addr){
         try {
             if(!isArt()){
                 return null;
             }
-//            Class<?> abstractMethodClass;
-//            try {
-//                abstractMethodClass = Class.forName("java.lang.reflect.AbstractMethod");
-//            }catch (Exception e){
-//                abstractMethodClass = Class.forName("java.lang.reflect.Executable");
-//            }
-//            if(Build.VERSION.SDK_INT<23){
-//                Class<?> artMethodClass = Class.forName("java.lang.reflect.ArtMethod");
-//                //Get the original artMethod field
-//                Field artMethodField = abstractMethodClass.getDeclaredField("artMethod");
-//                if (!artMethodField.isAccessible()) {
-//                    artMethodField.setAccessible(true);
-//                }
-//                Object srcArtMethod = artMethodField.get(con);
-//
-//                Constructor<?> constructor = artMethodClass.getDeclaredConstructor();
-//                constructor.setAccessible(true);
-//                Object destArtMethod = constructor.newInstance();
-//
-//                //Fill the fields to the new method we created
-//                for (Field field : artMethodClass.getDeclaredFields()) {
-//                    if (!field.isAccessible()) {
-//                        field.setAccessible(true);
-//                    }
-//                    field.set(destArtMethod, field.get(srcArtMethod));
-//                }
-//                Field access=artMethodClass.getDeclaredField("accessFlags");
-//                access.setAccessible(true);
-//                Method newCon = Method.class.getConstructor(artMethodClass).newInstance(destArtMethod);
-//                newCon.setAccessible(true);
-//                repair(newCon, addr);
-//                return newCon;
-//            }else {
-//                Constructor<Method> constructor = Method.class.getDeclaredConstructor();
-//                Field f;
-//                try {
-//                    f = AccessibleObject.class.getDeclaredField("override");
-//                }catch (Exception e){
-//                    f = AccessibleObject.class.getDeclaredField("flag");
-//                }
-//                f.setAccessible(true);
-//                f.set(constructor,true);
-//                Method m = constructor.newInstance();
-//                m.setAccessible(true);
-//                for (Field field : abstractMethodClass.getDeclaredFields()) {
-//                    field.setAccessible(true);
-//                    field.set(m, field.get(con));
-//                }
-//                Field artMethodField = abstractMethodClass.getDeclaredField("artMethod");
-//                artMethodField.setAccessible(true);
-//                artMethodField.set(m, addr);
-//                m.setAccessible(true);
-//                return m;
-//            }
             repair(invoker,addr);
             return invoker;
         }catch (Exception e) {
@@ -116,55 +78,6 @@ public class HookUtil {
             if(!isArt()){
                 return null;
             }
-//            Class<?> abstractMethodClass;
-//            try {
-//                abstractMethodClass = Class.forName("java.lang.reflect.AbstractMethod");
-//            }catch (Exception e){
-//                abstractMethodClass = Class.forName("java.lang.reflect.Executable");
-//            }
-//            if(Build.VERSION.SDK_INT<23){
-//                Class<?> artMethodClass = Class.forName("java.lang.reflect.ArtMethod");
-//                //Get the original artMethod field
-//                Field field = abstractMethodClass.getDeclaredField("artMethod");
-//                if (!field.isAccessible()) {
-//                    field.setAccessible(true);
-//                }
-////                Object srcArtMethod = artMethodField.get(con);
-//
-//                Constructor<?> constructor = artMethodClass.getDeclaredConstructor();
-//                constructor.setAccessible(true);
-//                Object destArtMethod = constructor.newInstance();
-//                field.set(invoker,destArtMethod);
-//                repair(invoker, addr);
-//                Field access=artMethodClass.getDeclaredField("accessFlags");
-//                access.setAccessible(true);
-//                int flags=(int)access.get(destArtMethod);
-//                flags=flags|0x0002;
-//                access.set(destArtMethod,flags);
-//                return invoker;
-//            }else {
-//                Constructor<Method> constructor = Method.class.getDeclaredConstructor();
-//                Field f;
-//                try {
-//                   f = AccessibleObject.class.getDeclaredField("override");
-//                }catch (Exception e){
-//                    f = AccessibleObject.class.getDeclaredField("flag");
-//                }
-////                f.setAccessible(true);
-////                f.set(constructor,true);
-////                Method m = constructor.newInstance();
-////                m.setAccessible(true);
-////                for (Field field : abstractMethodClass.getDeclaredFields()) {
-////                    field.setAccessible(true);
-////                    field.set(m, field.get(con));
-////                }
-////                Field artMethodField = abstractMethodClass.getDeclaredField("artMethod");
-////                artMethodField.setAccessible(true);
-////                artMethodField.set(m, addr);
-////                m.setAccessible(true);
-//                repair(invoker,addr);
-//                return invoker;
-//            }
             repair(invoker,addr);
             return invoker;
         }catch (Exception e) {

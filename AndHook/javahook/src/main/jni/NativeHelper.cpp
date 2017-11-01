@@ -7,9 +7,11 @@
 #include "ArtMethod_8_0.h"
 
 int size=0;
-int access;
-int level;
-bool isArt_;
+static int access=-1;
+static int level;
+static bool isArt_;
+static int supperOffset=-1;
+static int classAccessOffset=-1;
 typedef uint16_t u2;
 typedef uint32_t u4;
 void* (*dvmSetNativeFunc)(void*,void*,void*);
@@ -31,6 +33,7 @@ static long replaceNative(JNIEnv* env, jclass clazz, jobject src, jobject new_) 
 		ArtMethod *aSrc = (ArtMethod *) mSrc;
 		ArtMethod *aNew_ = (ArtMethod *) mNew_;
 		aNew_->method_index_ = aSrc->method_index_;
+		LOGD("cls=%p",aNew_->declaring_class_->ifields_);
 	}
 	memcpy(mSrc, mNew_, size);
 	return  (size_t)p;
@@ -38,16 +41,9 @@ static long replaceNative(JNIEnv* env, jclass clazz, jobject src, jobject new_) 
 static void repair(JNIEnv* env, jclass clazz, jobject src, jlong old) {
 	size_t* mSrc=(size_t*)env->FromReflectedMethod(src);
 	void* p=(void*) old;
-//	*(mSrc+access)=*(mSrc+access)|0x0002;
-//	if(old==-1){
-//		*(mSrc+access)=*(mSrc+access)|0x0002;
-//		return;
-//	}
 	memcpy(mSrc,p,size);
 	*(mSrc+access)=*(mSrc+access)|0x0002;
-	if(!isArt_) {
-		free(p);
-	}
+	free(p);
 	return;
 }
 static void computeAccess(JNIEnv* env, jclass clazz, jobject src) {
@@ -56,11 +52,38 @@ static void computeAccess(JNIEnv* env, jclass clazz, jobject src) {
 	for(int i=0;i<size/ sizeof(void *);++i){
 		if(*(mSrc+i)==0x80019&&*(com+i)==0x80009){
 			access=i;
-//			LOGD("access offset=%d",access);
 			return;
 		}
 	}
 	return ;
+}
+static jboolean setSupperCls(JNIEnv* env, jclass clazz, jobject flag) {
+	ArtField* field=(ArtField*)env->FromReflectedField(flag);
+	size_t *dCls=(size_t *)field->declaring_class_;
+	if(supperOffset==-1){
+		return false;
+	} else{
+		*(dCls+supperOffset)=NULL;
+		return true;
+	}
+}
+static void computeSupperCls(JNIEnv* env, jclass clazz,jobject fld,jobject test){
+	ArtField* field=(ArtField*)env->FromReflectedField(fld);
+	ArtField* demo=(ArtField*)env->FromReflectedField(test);
+	size_t *dCls=(size_t *)field->declaring_class_;
+	size_t *hCls=(size_t *)demo->declaring_class_;
+	LOGD("cls=%p",dCls);
+	LOGD("cls=%p",hCls);
+	for(int i=0;i<50;++i){
+		if(*(dCls+i)==0x80001){
+			classAccessOffset=i;
+			return;
+		}
+		if(*(dCls+i)==NULL&&*(hCls+i)==(uint32_t)dCls){//compute SupperClass offset
+			supperOffset=i;
+			LOGD("supperOffset=%d",i);
+		}
+	}
 }
 static void initMethod(JNIEnv* env, jclass clazz, jclass cls,jstring name,jstring sig, jboolean isstatic) {
 	jmethodID m;
@@ -91,6 +114,8 @@ static JNINativeMethod gMethods[] = {
 { "replaceNative", "(Ljava/lang/reflect/Member;Ljava/lang/reflect/Member;)J", (void*) replaceNative },
 { "repair", "(Ljava/lang/reflect/Member;J)V", (void*) repair },
 { "computeAccess", "(Ljava/lang/reflect/Method;)V", (void*) computeAccess },
+{ "computeSupperCls", "(Ljava/lang/reflect/Field;Ljava/lang/reflect/Field;)V", (void*) computeSupperCls },
+{ "setSupperCls", "(Ljava/lang/reflect/Field;)Z", (void*) setSupperCls },
 { "initMethod", "(Ljava/lang/Class;Ljava/lang/String;Ljava/lang/String;Z)V", (void*) initMethod },
 { "invoke", "(Ljava/lang/Object;[Ljava/lang/Object;)Ljava/lang/Object;", (void*) invoke },
 };

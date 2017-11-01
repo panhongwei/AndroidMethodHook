@@ -4,6 +4,7 @@ import android.util.Log;
 
 import com.android.dx.Code;
 import com.android.dx.DexMaker;
+import com.android.dx.FieldId;
 import com.android.dx.Local;
 import com.android.dx.MethodId;
 import com.android.dx.TypeId;
@@ -174,6 +175,10 @@ public class MethodUtil {
         Local<?> thisRef = code.getThis(declaringType);
         code.invokeDirect(TypeId.OBJECT.getConstructor(), null, thisRef);
         code.returnVoid();
+    }
+    public static void addDefaultInstanceField(DexMaker dexMaker, TypeId<?> declaringType) {
+         FieldId fieldId=declaringType.getField(TypeId.INT,"flag");
+         dexMaker.declare(fieldId,Modifier.PUBLIC ,null);
     }
     private static TypeId getTypeIdFromClass(Class cls){
         if(cls.getName().equals(int.class.getName())){

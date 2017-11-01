@@ -10,6 +10,16 @@ android {
         versionCode 1
         versionName "1.0"
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
+        externalNativeBuild {
+            ndkBuild {
+                abiFilters "armeabi", "armeabi-v7a", "x86"
+            }
+        }
+    }
+    externalNativeBuild {
+        ndkBuild {
+            path file("src/main/jni/Android.mk")
+        }
     }
     buildTypes {
         release {
