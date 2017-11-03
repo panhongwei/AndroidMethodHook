@@ -22,8 +22,8 @@
  *
  */
 
-#ifndef NativeHelper_H_
-#define NativeHelper_H_
+#ifndef Test123_H_
+#define Test123_H_
 
 #include <jni.h>
 #include "dlfcn.h"

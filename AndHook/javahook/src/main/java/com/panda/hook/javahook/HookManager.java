@@ -24,13 +24,16 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
+import dalvik.system.DexClassLoader;
+import dalvik.system.PathClassLoader;
+
 /**
  * Created by panda on 17/8/8.
  */
 
 public class HookManager {
     static private HashMap<String,BackMethod> hooked=new HashMap();
-    static private Context context=null;
+    static private Application context=null;
     static private List<BackMethod> needHooks=new ArrayList<>();
     private static final Map<Class<?>, String> PRIMITIVE_TO_SIGNATURE;
     static {
@@ -73,8 +76,20 @@ public class HookManager {
         return sigName;
     }
     public static void beginHook(List<BackMethod> methods){
+        if(!HookUtil.isArt()){
+            startDavilkHook(methods);
+        }else {
+            startArtHook(methods);
+        }
+    }
+    private  static void startDavilkHook(List<BackMethod> methods){
+        for(BackMethod bak : methods){
+            HookUtil.generateMethodDavilk(bak);
+        }
+        return;
+    }
+    private  static void startArtHook(List<BackMethod> methods){
         try {
-//            ReflectionFix.fixMethodReflection();
             Iterator<BackMethod> it = methods.iterator();
             while(it.hasNext()){
                 BackMethod m = it.next();
@@ -95,7 +110,7 @@ public class HookManager {
                     TypeId<?> cls = TypeId.get("L"+name+";");
                     Class target=m.getOldMethod().getDeclaringClass();
 //                    dexMaker.declare(cls, "", Modifier.PUBLIC, TypeId.OBJECT);
-                    if(Modifier.isFinal(target.getModifiers())) {
+                    if(Modifier.isFinal(target.getModifiers())||!HookUtil.isArt()) {
                         dexMaker.declare(cls, "", Modifier.PUBLIC, TypeId.OBJECT);
                     }else {
                         dexMaker.declare(cls, "", Modifier.PUBLIC, TypeId.get(target));
@@ -127,23 +142,23 @@ public class HookManager {
                     f.delete();
                 }
             }
-            ClassLoader loader = dexMaker.generateAndLoad(context.getClassLoader(),
-                    outputDir);
+//            dexMaker.generate();
+            ClassLoader loader = dexMaker.generateAndLoad(context.getClassLoader(), outputDir);
             for(BackMethod bak : methods){
                 Member m=bak.getOldMethod();
                 String name=m.getDeclaringClass().getName().replace(".","_");
                 Class<?> cls = loader.loadClass(name);
-                Field classLoaderField = Class.class.getDeclaredField("classLoader");
-                classLoaderField.setAccessible(true);
-                classLoaderField.set(cls, m.getDeclaringClass().getClassLoader());
                 Constructor con=cls.getDeclaredConstructor();
                 con.newInstance();
                 Member mem=null;
                 Method invoker=null;
-                if( HookUtil.isArt()) {
-                    if (!HookUtil.setMadeClassSuper(cls)) {
-                        throw new FileNotFoundException("found error!");
-                    }
+//                if( HookUtil.isArt()) {
+//                    Field classLoaderField = Class.class.getDeclaredField("classLoader");
+//                    classLoaderField.setAccessible(true);
+//                    classLoaderField.set(cls, m.getDeclaringClass().getClassLoader());
+//                }
+                if (!HookUtil.setMadeClassSuper(cls)) {
+                    throw new FileNotFoundException("found error!");
                 }
                 if(m instanceof Method){
                     mem=cls.getDeclaredMethod(m.getName(),((Method) m).getParameterTypes());
@@ -165,7 +180,7 @@ public class HookManager {
                     HookUtil.initMethod(m.getDeclaringClass(),"<init>",sig,Modifier.isStatic(m.getModifiers()));
                 }
                 bak.setNewMethod(mem);
-                HookUtil.generateMethod(bak);
+                HookUtil.generateMethodaArt(bak);
                 hooked.put(mem.getDeclaringClass().getSimpleName()+"_"+HookUtil.sign(m),bak);
             }
         }catch (Exception e){
@@ -194,10 +209,10 @@ public class HookManager {
         back.setCallback(callback);
         addNeedsMethod(null,back,false);
     }
-    public static void startHooks(Context context){
+    public static void startHooks(Application context){
         addNeedsMethod(context,null,true);
     }
-    private static void addNeedsMethod(Context con,BackMethod m,boolean end){
+    private static void addNeedsMethod(Application con,BackMethod m,boolean end){
         if (!end){
             needHooks.add(m);
         }else {
@@ -245,10 +260,9 @@ public class HookManager {
 
     public static Object invoke(String method,Object thiz,Object[] args)throws  Throwable{
         Member old=null;
-        Object res=null;
+//        Object res=null;
         MethodCallback callback=null;
         BackMethod back =(BackMethod) hooked.get(method);
-        MethodHookParam param=new MethodHookParam();
         if(back==null){
             throw new  NullPointerException("find back null");
         }
@@ -260,11 +274,15 @@ public class HookManager {
         if(old==null){
             throw new  NullPointerException("find old Method null");
         }
+        return invoke(old,callback,thiz,args);
+    }
+    public static Object invoke(Member old,MethodCallback callback,Object thiz,Object[] args)throws  Throwable{
         if(old instanceof Method){
             ((Method) old).setAccessible(true);
         }else{
             ((Constructor) old).setAccessible(true);
         }
+        MethodHookParam param=new MethodHookParam();
         param.method = old;
         param.thisObject = thiz;
         param.args = args;
@@ -277,19 +295,13 @@ public class HookManager {
             param.returnEarly = false;
         }
         if (param.getThrowable()!=null) {
-            if(!HookUtil.isArt()){
-                HookUtil.generateMethod(back);
-            }
             throw param.getThrowable();
         }
         if (param.returnEarly) {
-            if(!HookUtil.isArt()){
-                HookUtil.generateMethod(back);
-            }
             return param.getResult();
         }
-        if(old instanceof Method){
-            res=((Method) old).invoke(thiz,args);
+        if(HookUtil.isArt()){
+            Object res = ((Method) old).invoke(thiz, args);
             param.setResult(res);
             try {
                 callback.afterHookedMethod(param);
@@ -297,16 +309,13 @@ public class HookManager {
                 param.setResult(null);
             }
         }else {
-            HookUtil.invokeOriginalMethod(old,thiz,args);
-            param.setResult(null);
+            Object res =HookUtil.invokeOriginalMethod(old,thiz,args);
+            param.setResult(res);
             try {
                 callback.afterHookedMethod(param);
             } catch (Throwable t) {
                 param.setResult(null);
             }
-        }
-        if(!HookUtil.isArt()){
-            HookUtil.generateMethod(back);
         }
         if (param.getThrowable()!=null) {
             throw param.getThrowable();

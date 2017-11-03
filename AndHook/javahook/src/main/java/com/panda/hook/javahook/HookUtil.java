@@ -34,12 +34,13 @@ public class HookUtil extends Object{
             }
         }catch (Exception e){e.printStackTrace();}
     }
-    private static native long replaceNative(Member src,Member new_);
+    private static native long replaceNativeArt(Member src,Member new_,Method invoker);
+    private static native long replaceNativeDavilk(Member src,MethodCallback callback);
     private static native void repair(Member src,long old);
     private static native void computeAccess(Method m);
     private static native void computeSupperCls(Field fld,Field test);
     private static native boolean setSupperCls(Field fld);
-    private static native void invokeDavConstructor(Member method,
+    private static native Object invokeDavConstructor(Member method,
                 Class<?>[] parameterTypes, Class<?> returnType, Object thisObject, Object[] args)
             throws NullPointerException, IllegalAccessException, IllegalArgumentException, InvocationTargetException;
 //    private static native Method replaceNativeDavilk(Member src,Member new_);
@@ -85,7 +86,7 @@ public class HookUtil extends Object{
         }
         return null;
     }
-    public static void invokeOriginalMethod(Member method, Object thisObject, Object[] args)
+    public static Object invokeOriginalMethod(Member method, Object thisObject, Object[] args)
             throws NullPointerException, IllegalAccessException, IllegalArgumentException, InvocationTargetException {
         if (args == null) {
             args = new Object[0];
@@ -103,32 +104,30 @@ public class HookUtil extends Object{
         } else {
             throw new IllegalArgumentException("method must be of type Method or Constructor");
         }
-        invokeDavConstructor(method, parameterTypes, returnType, thisObject, args);
+        return invokeDavConstructor(method, parameterTypes, returnType, thisObject, args);
     }
     public static Member repairMethod(Member method,Method invoker,long old){
+//        Log.d("panda",Modifier.isStatic(invoker.getModifiers())+"");
+//        return invoker;
         if(isArt()){
-            String name=method.getDeclaringClass().getSimpleName()+"_"+sign(method);
-            Method m=conMap.get(name);
-            if(m!=null){
-                return m;
-            }
-            if(method instanceof Method){
-                Method m_=getOldMethod((Method)method,invoker,old);
-                conMap.put(name,m_);
-                return m_;
-            }else{
-                Method m_=getOldConstructor((Constructor) method,invoker,old);
-                conMap.put(name,m_);
-                return m_;
-            }
+            return invoker;
         }else {
-            repair(method, old);
             return method;
         }
     }
-    public static void generateMethod(BackMethod old){
+    public static void generateMethodaArt(BackMethod old){
         try {
-            long bak=replaceNative(old.getOldMethod(), old.getNewMethod())&0xffffffffffffffffl;
+            long bak=replaceNativeArt(old.getOldMethod(), old.getNewMethod(),old.getInvoker())&0xffffffffffffffffl;
+            old.setBackAddr(bak);
+            return;
+        }catch (Exception e){
+            e.printStackTrace();
+            return;
+        }
+    }
+    public static void generateMethodDavilk(BackMethod old){
+        try {
+            long bak=replaceNativeDavilk(old.getOldMethod(),(MethodCallback) old.getCallback());
             old.setBackAddr(bak);
             return;
         }catch (Exception e){

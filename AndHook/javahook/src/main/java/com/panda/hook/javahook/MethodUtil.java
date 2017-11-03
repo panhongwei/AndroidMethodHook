@@ -114,11 +114,60 @@ public class MethodUtil {
         for (int i = 0; i < pTypes.length; ++i) {
             params[i ] = getTypeIdFromClass(pTypes[i]);
         }
-        MethodId proxy = declaringType.getMethod(TypeId.get(Void.TYPE), m.getName()+"_Invoker", params);
+        MethodId proxy = declaringType.getMethod(TypeId.get(m.getReturnType()), m.getName()+"_Invoker", params);
         Code code;
-        code = dexMaker.declare(proxy, Modifier.STATIC | Modifier.PUBLIC);
-        code.returnVoid();
-        return;
+        if(Modifier.isStatic(m.getModifiers())) {
+            code = dexMaker.declare(proxy, Modifier.STATIC | Modifier.PUBLIC);
+        }else{
+            int mode=Modifier.isPrivate(m.getModifiers())?Modifier.PRIVATE:Modifier.PUBLIC;
+            code = dexMaker.declare(proxy, mode);
+        }
+        Local<Object[]> args = code.newLocal(TypeId.get(Object[].class));
+        Local<Integer> a = code.newLocal(TypeId.INT);
+        Local i_ = code.newLocal(TypeId.INT);
+        Local arg_ = code.newLocal(TypeId.OBJECT);
+
+        Local localResult = code.newLocal(TypeId.OBJECT);
+        Local caller = code.newLocal(TypeId.STRING);
+        Local res = code.newLocal(TypeId.get(m.getReturnType()));
+        Local cast = m.getReturnType().equals(void.class)?null:code.newLocal(getClassTypeFromClass(m.getReturnType()));
+        Local<?> thisRef ;
+        if(Modifier.isStatic(m.getModifiers())){
+            thisRef=code.newLocal(declaringType);
+            code.loadConstant(thisRef,null);
+        }else{
+            thisRef=code.getThis(declaringType);
+        }
+        code.loadConstant(caller,m.getDeclaringClass().getName().replace(".","_")+"_"+HookUtil.sign(m));
+        code.loadConstant(a, proxy.getParameters().size() );
+        code.newArray(args, a);
+        for (int i = 0; i < pTypes.length; ++i) {
+            code.loadConstant(i_, i);
+            MethodId mId = getValueFromClass(pTypes[i]);
+            if (mId != null) {
+                code.invokeStatic(mId, arg_, code.getParameter(i , (TypeId) proxy.getParameters().get(i )));
+                code.aput(args, i_, arg_);
+            } else {
+                code.aput(args, i_, code.getParameter(i , (TypeId) proxy.getParameters().get(i )));
+            }
+        }
+        MethodId invoke = utilType.getMethod(TypeId.OBJECT, "invoke",TypeId.STRING, TypeId.OBJECT, TypeId.get(Object[].class));
+        code.invokeStatic(invoke, localResult,caller, thisRef, args);
+        if(m.getReturnType().equals(void.class)){
+            code.returnVoid();
+            return;
+        }
+        if(getValueFromClass(m.getReturnType())!=null){
+            MethodId mId = toValueFromClass(m.getReturnType());
+            code.cast(cast,localResult);
+            code.invokeVirtual(mId,res, cast);
+            code.returnValue(res);
+            return;
+        }else{
+            code.cast(res,localResult);
+            code.returnValue(res);
+            return;
+        }
     }
     public static void generateInvokerFromConstructor(DexMaker dexMaker, TypeId<?> declaringType,Constructor m) {
         Class<?>[] pTypes = m.getParameterTypes();
@@ -179,6 +228,7 @@ public class MethodUtil {
     public static void addDefaultInstanceField(DexMaker dexMaker, TypeId<?> declaringType) {
          FieldId fieldId=declaringType.getField(TypeId.INT,"flag");
          dexMaker.declare(fieldId,Modifier.PUBLIC ,null);
+
     }
     private static TypeId getTypeIdFromClass(Class cls){
         if(cls.getName().equals(int.class.getName())){

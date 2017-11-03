@@ -34,7 +34,7 @@ public class MainActivity extends AppCompatActivity  {
         setContentView(R.layout.activity_main);
         try {
             Log.d("panda","before invoke test =======>>>>>>");
-            Log.d("panda","test res="+ test(this,123,2444,'Z')+"");
+            Log.d("panda", test(this,123,2444,'Z')+"");
             Log.d("panda","before invoke test1 =======>>>>>>");
             Log.d("panda","test1 res="+test1(this,333,4444,'E')+"");
             Log.d("panda","before invoke contrustor Test =======>>>>>>");
@@ -51,9 +51,10 @@ public class MainActivity extends AppCompatActivity  {
     public  static MainActivity test(Object thiz,int a,int b,char cr){
         return null;
     }
-    public int test1(Object thiz,int a,int b,char cr){
+    public double test1(Object thiz,int a,int b,char cr){
         Log.d("panda","in new test1");
-        return 111;
+        Log.d("panda",this+"");
+        return 111.001;
     }
 
     public int test2(){

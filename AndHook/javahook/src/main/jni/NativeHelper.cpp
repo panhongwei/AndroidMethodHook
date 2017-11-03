@@ -2,41 +2,60 @@
 #include <stdio.h>
 #include <cassert>
 #include "NativeHelper.h"
+#include "davilk.h"
 #include <malloc.h>
 #include <string.h>
-#include "ArtMethod_8_0.h"
 
 int size=0;
 static int access=-1;
 static int level;
 static bool isArt_;
 static int supperOffset=-1;
-static int classAccessOffset=-1;
 typedef uint16_t u2;
 typedef uint32_t u4;
-void* (*dvmSetNativeFunc)(void*,void*,void*);
-void* (*dvmInvokeMethod)(void* obj, void* method,
-						 void* argList, void* params, void* returnType,
-						 bool noAccessCheck);
-void* (*dvmGetMethodFromReflectObj)(void*);
+static jmethodID hInvoke;
 
-static void invokeDavConstructor(const u4* args, void* pResult, void* method, void* self);
-static long replaceNative(JNIEnv* env, jclass clazz, jobject src, jobject new_) {
+static void invokeDavConstructor(const u4* args, JValue* pResult, void* method, void* self);
+static long replaceNativeArt(JNIEnv* env, jclass clazz, jobject src, jobject new_,jobject invoker) {
 	void* mSrc=(void*)env->FromReflectedMethod(src);
 	void* mNew_=(void*)env->FromReflectedMethod(new_);
-	void* p=malloc(size);
-	if(p){
-		memcpy(p,mSrc,size);
+	size_t* mInvoker=(size_t*)env->FromReflectedMethod(invoker);
+	if(isArt_) {
+		memcpy(mInvoker, mSrc, size);
+		*(mInvoker + access) = *(mInvoker + access) | 0x0002;
+		memcpy(mSrc, mNew_, size);
+	}
+	return  (size_t)mInvoker;
+}
+static void replaceNativeDavilk(JNIEnv* env, jclass clazz, jobject src, jobject callback) {
+	Method* method=(Method*)env->FromReflectedMethod(src);
+	LOGE("dalvik_hookMethodNative");
+	if (callback == NULL) {
+		LOGE("method and declaredClass must not be null");
+		return ;
+	}
+	if (method == NULL) {
+		LOGE("Could not get internal representation for method");
+		return ;
+	}
+	if (isMethodHooked(method)) {
+		// already hooked
+		return;
+	}
+	XposedHookInfo* hookInfo = (XposedHookInfo*) calloc(1, sizeof(XposedHookInfo));
+	memcpy(hookInfo, method, sizeof(hookInfo->originalMethodStruct));
+	hookInfo->reflectedMethod = dvmDecodeIndirectRef(dvmThreadSelf(), env->NewGlobalRef(src));
+	hookInfo->callback = dvmDecodeIndirectRef(dvmThreadSelf(), env->NewGlobalRef(callback));
 
-	}
-	if(level>=26&&!IsDirect(((ArtMethod *) mSrc)->access_flags_)) {
-		ArtMethod *aSrc = (ArtMethod *) mSrc;
-		ArtMethod *aNew_ = (ArtMethod *) mNew_;
-		aNew_->method_index_ = aSrc->method_index_;
-		LOGD("cls=%p",aNew_->declaring_class_->ifields_);
-	}
-	memcpy(mSrc, mNew_, size);
-	return  (size_t)p;
+	// Replace method with our own code
+
+	method->accessFlags=method->accessFlags|kAccNative;
+	method->func = (void *)&hookedMethodCallback;
+	method->insns = (u2*) hookInfo;
+	method->registersSize = method->insSize;
+	method->outsSize = 0;
+
+	return ;
 }
 static void repair(JNIEnv* env, jclass clazz, jobject src, jlong old) {
 	size_t* mSrc=(size_t*)env->FromReflectedMethod(src);
@@ -58,13 +77,18 @@ static void computeAccess(JNIEnv* env, jclass clazz, jobject src) {
 	return ;
 }
 static jboolean setSupperCls(JNIEnv* env, jclass clazz, jobject flag) {
-	ArtField* field=(ArtField*)env->FromReflectedField(flag);
-	size_t *dCls=(size_t *)field->declaring_class_;
-	if(supperOffset==-1){
-		return false;
-	} else{
-		*(dCls+supperOffset)=NULL;
-		return true;
+	if(!isArt_){
+//		Field* field=(Field*)env->FromReflectedField(flag);
+//		field->clazz->super=NULL;
+	} else {
+		ArtField* field=(ArtField*)env->FromReflectedField(flag);
+		size_t *dCls=(size_t *)field->declaring_class_;
+		if (supperOffset == -1) {
+			return false;
+		} else {
+			*(dCls + supperOffset) = NULL;
+			return true;
+		}
 	}
 }
 static void computeSupperCls(JNIEnv* env, jclass clazz,jobject fld,jobject test){
@@ -72,16 +96,11 @@ static void computeSupperCls(JNIEnv* env, jclass clazz,jobject fld,jobject test)
 	ArtField* demo=(ArtField*)env->FromReflectedField(test);
 	size_t *dCls=(size_t *)field->declaring_class_;
 	size_t *hCls=(size_t *)demo->declaring_class_;
-	LOGD("cls=%p",dCls);
-	LOGD("cls=%p",hCls);
 	for(int i=0;i<50;++i){
-		if(*(dCls+i)==0x80001){
-			classAccessOffset=i;
-			return;
-		}
 		if(*(dCls+i)==NULL&&*(hCls+i)==(uint32_t)dCls){//compute SupperClass offset
 			supperOffset=i;
-			LOGD("supperOffset=%d",i);
+			LOGD("find supperOffset=%d",i);
+			return;
 		}
 	}
 }
@@ -100,6 +119,40 @@ static void initMethod(JNIEnv* env, jclass clazz, jclass cls,jstring name,jstrin
 	}
 	return;
 }
+void hookedMethodCallback(const u4* args, JValue* pResult, const Method* method, void* self) {
+	if (!isMethodHooked(method)) {
+		LOGE("Could not find Xposed original method - how did you even get here?");
+		return;
+	}
+	XposedHookInfo* hookInfo = (XposedHookInfo*) method->insns;
+	Method* original = (Method*) hookInfo;
+	Object* originalReflected = hookInfo->reflectedMethod;
+	Object* callback = hookInfo->callback;
+	Object* thisObject = !dvmIsStaticMethod(original) ? (Object*)args[0]: NULL;
+	ArrayObject* argTypes = dvmBoxMethodArgs(original, dvmIsStaticMethod(original) ? args : args + 1);
+	JValue result;
+	dvmCallMethod(self, (Method*) hInvoke, NULL, &result,
+						originalReflected,  callback, thisObject, argTypes);
+	dvmReleaseTrackedAlloc((Object *)argTypes, self);
+// exceptions are thrown to the caller
+//	if (dvmCheckException(self)) {
+//		return;
+//	}
+	ClassObject* returnType = dvmGetBoxedReturnType(method);
+	if (returnType->primitiveType == PRIM_VOID) {
+		// ignored
+	} else if (result.l == NULL) {
+		if (dvmIsPrimitiveClass(returnType)) {
+			LOGE("null result when primitive expected");
+		}
+		pResult->l = NULL;
+	} else {
+		if (!dvmUnboxPrimitive((Object *)result.l, returnType, pResult)) {
+			//(result.l->clazz, returnType);
+			LOGE("null result when primitive expected");
+		}
+	}
+}
 jobject invoke(JNIEnv* env, jobject clazz,jobject obj,jobject args){
 	LOGD("in native invoke");
 	jclass fix=env->FindClass(FIX_CLASS);
@@ -111,7 +164,8 @@ jobject invoke(JNIEnv* env, jobject clazz,jobject obj,jobject args){
  * JNI registration.
  */
 static JNINativeMethod gMethods[] = {
-{ "replaceNative", "(Ljava/lang/reflect/Member;Ljava/lang/reflect/Member;)J", (void*) replaceNative },
+{ "replaceNativeArt", "(Ljava/lang/reflect/Member;Ljava/lang/reflect/Member;Ljava/lang/reflect/Method;)J", (void*) replaceNativeArt },
+{ "replaceNativeDavilk", "(Ljava/lang/reflect/Member;Lcom/panda/hook/javahook/MethodCallback;)J", (void*) replaceNativeDavilk },
 { "repair", "(Ljava/lang/reflect/Member;J)V", (void*) repair },
 { "computeAccess", "(Ljava/lang/reflect/Method;)V", (void*) computeAccess },
 { "computeSupperCls", "(Ljava/lang/reflect/Field;Ljava/lang/reflect/Field;)V", (void*) computeSupperCls },
@@ -170,8 +224,16 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* vm, void* reserved) {
 		if(dvm) {
 			dvmSetNativeFunc = (void *(*)(void *, void *, void *)) (dlsym(dvm,
 																		  "_Z16dvmSetNativeFuncP6MethodPFvPKjP6JValuePKS_P6ThreadEPKt"));
+			if (!dvmSetNativeFunc) {
+				LOGD("dvmSetNativeFunc is null");
+				return JNI_FALSE;
+			}
 			dvmGetMethodFromReflectObj = (void *(*)(void *)) (dlsym(dvm,
 																		  "_Z26dvmGetMethodFromReflectObjP6Object"));
+			if (!dvmGetMethodFromReflectObj) {
+				LOGD("dvmGetMethodFromReflectObj is null");
+				return JNI_FALSE;
+			}
 			dvmInvokeMethod=(void* (*)(void* obj, void* method,
 									 void* argList, void* params, void* returnType,
 									 bool noAccessCheck))(dlsym(dvm,"_Z15dvmInvokeMethodP6ObjectPK6MethodP11ArrayObjectS5_P11ClassObjectb"));
@@ -179,11 +241,70 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* vm, void* reserved) {
 				LOGD("dvmCallMethod_fnPtr is null");
 				return JNI_FALSE;
 			}
-			LOGD("dvmSetNativeFunc=%p dvmGetMethodFromReflectObj=%p dvmInvokeMethod=%p",dvmSetNativeFunc,dvmGetMethodFromReflectObj,dvmInvokeMethod);
+			dvmDecodeIndirectRef=(Object* (* )(void* self, jobject jobj))(dlsym(dvm,"_Z20dvmDecodeIndirectRefP6ThreadP8_jobject"));
+			if (!dvmDecodeIndirectRef) {
+				LOGD("dvmDecodeIndirectRef is null");
+				return JNI_FALSE;
+			}
+			dvmThreadSelf=(void* (*)())(dlsym(dvm,"_Z13dvmThreadSelfv"));
+			if (!dvmThreadSelf) {
+				LOGD("dvmThreadSelf is null");
+				return JNI_FALSE;
+			}
+			dvmCallMethod=(void (*)(void* self, const Method* method, Object* obj,void* pResult, ...))(dlsym(dvm,"_Z13dvmCallMethodP6ThreadPK6MethodP6ObjectP6JValuez"));
+			if (!dvmCallMethod) {
+				LOGD("dvmCallMethod is null");
+				return JNI_FALSE;
+			}
+			dvmReleaseTrackedAlloc=(void (*)(Object* obj, void* self))(dlsym(dvm,"dvmReleaseTrackedAlloc"));
+			if (!dvmReleaseTrackedAlloc) {
+				LOGD("dvmReleaseTrackedAlloc is null");
+				return JNI_FALSE;
+			}
+			dvmUnboxPrimitive=(bool (*)(Object* value, ClassObject* returnType,void* pResult))(dlsym(dvm,"_Z17dvmUnboxPrimitiveP6ObjectP11ClassObjectP6JValue"));
+			if (!dvmUnboxPrimitive) {
+				LOGD("dvmUnboxPrimitive is null");
+				return JNI_FALSE;
+			}
+			dvmGetBoxedReturnType=(ClassObject* (*)(const Method* meth))(dlsym(dvm,"_Z21dvmGetBoxedReturnTypePK6Method"));
+			if (!dvmGetBoxedReturnType) {
+				LOGD("dvmGetBoxedReturnType is null");
+				return JNI_FALSE;
+			}
+			dexProtoGetParameterCount=(size_t (*)(const DexProto* pProto))(dlsym(dvm,"_Z25dexProtoGetParameterCountPK8DexProto"));
+			if (!dexProtoGetParameterCount) {
+				LOGD("dexProtoGetParameterCount is null");
+				return JNI_FALSE;
+			}
+			dvmAllocArrayByClass=(ArrayObject* (*)(ClassObject* arrayClass,size_t length, int allocFlags))(dlsym(dvm,"dvmAllocArrayByClass"));
+			if (!dvmAllocArrayByClass) {
+				LOGD("dvmAllocArrayByClass is null");
+				return JNI_FALSE;
+			}
+			dvmFindSystemClass=(ClassObject* (*)(const char* descriptor))(dlsym(dvm,"_Z18dvmFindSystemClassPKc"));
+			if (!dvmFindSystemClass) {
+				LOGD("dvmFindSystemClass is null");
+				return JNI_FALSE;
+			}
+			dvmFindPrimitiveClass=(ClassObject* (*)(char type))(dlsym(dvm,"_Z21dvmFindPrimitiveClassc"));
+			if (!dvmFindPrimitiveClass) {
+				LOGD("dvmFindPrimitiveClass is null");
+				return JNI_FALSE;
+			}
+			dvmBoxPrimitive=(void* (*)(JValue value, ClassObject* returnType))(dlsym(dvm,"_Z15dvmBoxPrimitive6JValueP11ClassObject"));
+			if (!dvmBoxPrimitive) {
+				LOGD("dvmBoxPrimitive is null");
+				return JNI_FALSE;
+			}
 			jmethodID dexposedInvokeOriginalMethodNative = env->GetStaticMethodID(env->FindClass(JAVA_CLASS), "invokeDavConstructor",
-																						  "(Ljava/lang/reflect/Member;[Ljava/lang/Class;Ljava/lang/Class;Ljava/lang/Object;[Ljava/lang/Object;)V");
+																						  "(Ljava/lang/reflect/Member;[Ljava/lang/Class;Ljava/lang/Class;Ljava/lang/Object;[Ljava/lang/Object;)Ljava/lang/Object;");
 
+			hInvoke = env->GetStaticMethodID(env->FindClass(MANAGER_CLASS), "invoke",
+																				  "(Ljava/lang/reflect/Member;Lcom/panda/hook/javahook/MethodCallback;Ljava/lang/Object;[Ljava/lang/Object;)Ljava/lang/Object;");
+
+			LOGD("hInvoke is %p",hInvoke);
 			dvmSetNativeFunc((void*)dexposedInvokeOriginalMethodNative,(void*)invokeDavConstructor,NULL);
+
 		} else{
 			LOGD("cant dlopen libdvm");
 		}
@@ -191,17 +312,20 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* vm, void* reserved) {
 //	LOGD("size offset=%d level=%d",size,level);
 	return JNI_VERSION_1_4;
 }
-static void invokeDavConstructor(const u4* args, void* pResult, void* method, void* self) {
-	void* meth = NULL;
+static void invokeDavConstructor(const u4* args, JValue* pResult, void* method, void* self) {
+//	LOGE("XposedBridge_invokeOriginalMethodNative");
+	Method* meth = NULL;
 	if (meth == NULL) {
-		meth = dvmGetMethodFromReflectObj((void*) args[0]);
+		meth = (Method *)dvmGetMethodFromReflectObj((void*) args[0]);
+		if (isMethodHooked(meth)) {
+			meth = (Method*) meth->insns;
+		}
 	}
 	void* params = (void*) args[1];
 	void* returnType = (void*) args[2];
 	void* thisObject = (void*) args[3]; // null for static methods
 	void* argList = (void*) args[4];
-
 	// invoke the method
-	dvmInvokeMethod(thisObject, meth, argList, params, returnType, true);
-	return;
+	pResult->l=dvmInvokeMethod(thisObject, meth, argList, params, returnType, true);
+	return ;
 }

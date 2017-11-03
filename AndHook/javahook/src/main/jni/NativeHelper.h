@@ -36,10 +36,21 @@
 #define LOGW(...) __android_log_print(ANDROID_LOG_WARN,  TAG, __VA_ARGS__)
 #define LOGE(...) __android_log_print(ANDROID_LOG_ERROR, TAG, __VA_ARGS__)
 #define JAVA_CLASS "com/panda/hook/javahook/HookUtil"
+#define MANAGER_CLASS "com/panda/hook/javahook/HookManager"
 #define DEMO_CLASS "com/panda/hook/javahook/MethodDemo"
 #define FIX_CLASS "com/panda/hook/javahook/ReflectionFix"
 //#define OBJECT_CLASS "java/lang/Object"
 #define OBJECT_PATH "java/lang/Object"
+static constexpr uint32_t kAccPublic =       0x0001;  // class, field, method, ic
+static constexpr uint32_t kAccPrivate =      0x0002;  // field, method, ic
+static constexpr uint32_t kAccProtected =    0x0004;  // field, method, ic
+static constexpr uint32_t kAccStatic =       0x0008;  // field, method, ic
+static constexpr uint32_t kAccConstructor =           0x00010000;  // method (dex only) <(cl)init>
+static constexpr uint32_t kAccNative =       0x0100;  // method
+static constexpr uint32_t kAccFinal =        0x0010;
+bool IsFinal(uint32_t access_flags){
+    return (access_flags & kAccFinal) != 0;
+}
 
 class ArtField{
 public:
@@ -53,5 +64,4 @@ public:
     // Offset of field within an instance or in the Class' static fields
     uint32_t offset_ = 0;
 };
-
 #endif
